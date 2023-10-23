@@ -5,11 +5,16 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-
 [RequireComponent(typeof(CharacterController))]
+[RequireComponent(typeof(CharacterRigController))]
 public class Character : MonoBehaviour
 {
-    public LayerMask mask;
+    [Header("Scripts")]
+    [SerializeField] private CharacterRigController characterRigController;
+
+    [Header("Character settings")]
+    [SerializeField] private float gravity = -9.81f;
+
 
     //Debug Reasons
     private Vector3 mouseLookGizmoPos;
@@ -20,7 +25,6 @@ public class Character : MonoBehaviour
     private CharacterController controller;
     private Vector3 playerVelocity;
     private bool groundedPlayer;
-
 
     //Animation bools
     [SerializeField] Animator animator;
@@ -42,21 +46,16 @@ public class Character : MonoBehaviour
     void Update()
     {
         STREAMING_DATA.CHARACTER_TRANSFORM = transform;
-        Vector3 lookVect = STREAMING_DATA.MOUSE_POSITION;
 
+        LookAtMousePosition();
 
-        Quaternion lookQuat = Quaternion.LookRotation(lookVect - transform.position, Vector3.up).normalized;
-        this.transform.rotation = Quaternion.Slerp(transform.rotation, lookQuat, rotationSpeed);
-
-        /*
-        if (groundedPlayer && playerVelocity.y < 0)
-        {
-            playerVelocity.y = 0f;
-        }
-        */
 
         Vector3 move = transform.right * Input.GetAxis("Horizontal") + transform.forward * Input.GetAxis("Vertical");
+        move.y += gravity * Time.deltaTime;
         controller.Move(move * Time.deltaTime * playerSpeed);
+
+
+
 
 
         /*
@@ -79,11 +78,26 @@ public class Character : MonoBehaviour
         */
     }
 
+    private void LookAtMousePosition() 
+    {
+        Vector3 lookVect = STREAMING_DATA.MOUSE_POSITION;
+        
+        if (Vector3.Distance(transform.position,lookVect) <= 1) 
+        {
+            Debug.Log("Z");
+            return;
+        }
+        
+        Quaternion lookQuat = Quaternion.LookRotation(lookVect - transform.position, Vector3.up).normalized;
+        this.transform.rotation = Quaternion.Slerp(transform.rotation, lookQuat, rotationSpeed * Time.fixedDeltaTime);
+    }
 
     private void SetAnimationState(string newState)
     {
-        if (newState == currentState) { return; }
-
+        if (newState == currentState) 
+        {
+            return;
+        }
         animator.Play(newState);
         currentState = newState;
     }
